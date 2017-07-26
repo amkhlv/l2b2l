@@ -14,6 +14,7 @@ import qualified  Text.PrettyPrint.Free as PP
 
 sections = ["section", "subsection", "subsubsection"]
 
+-- this configures printing of the LaTeX code
 prntLT :: LaTeX -> String
 prntLT ltx = let
   d = docLaTeX ltx
@@ -25,13 +26,8 @@ btArg (FixArg ltx) = bt False ltx
 btArg (OptArg ltx) = bt False ltx
 btArg (MOptArg ltxs) = T.concat $ bt False <$> ltxs
     
-findLabelImmediately :: LaTeX -> Maybe Text
-findLabelImmediately ltx = case ltx of
-  TeXSeq l1 l2 -> case l1 of
-    TeXRaw _ -> findLabelImmediately l2
-    TeXComm "label" [FixArg (TeXRaw lbl)] -> Just lbl
-    _ -> Nothing
-  _ -> Nothing
+
+-- functions below are needed to convert \label into @label and @tag
 
 findLabel :: LaTeX -> Maybe Text
 findLabel ltx = case ltx of
@@ -41,10 +37,14 @@ findLabel ltx = case ltx of
     _ -> findLabel l2
   _ -> Nothing
 
-removeOneLabel :: LaTeX -> LaTeX
-removeOneLabel (TeXSeq (TeXRaw x) y) = (TeXSeq (TeXRaw x) (removeOneLabel y))
-removeOneLabel (TeXSeq (TeXComm "label" _) x) = x
-removeOneLabel x = x
+getLabelAndRest :: LaTeX -> Maybe (Text, LaTeX) 
+getLabelAndRest ltx = getLabelAndRest' TeXEmpty ltx
+getLabelAndRest' acc ltx = case ltx of
+  TeXComm "label" [FixArg (TeXRaw lbl)] -> Just (lbl, acc)
+  TeXSeq l1 l2 -> case l1 of
+    TeXComm "label" [FixArg (TeXRaw lbl)] -> Just (lbl, acc <> l2)
+    _ -> getLabelAndRest' (acc <> l1) l2
+  x -> Nothing
 
 unLabel :: LaTeX -> LaTeX
 unLabel (TeXComm "label" _) = TeXEmpty
@@ -61,18 +61,18 @@ needToDrop _ = False
 chomp t = T.dropWhileEnd (== '\n') $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t
 splitOnAmpersand' acc (TeXRaw x) = case (T.breakOnAll (T.pack "&") x) of
   [(t1,t2)] -> (
-    if needToDrop acc then TeXRaw (T.dropWhile (\y -> (y == '\n') || (y == ' ')) t1) else acc <> TeXRaw t1,
+    if needToDrop acc then TeXRaw $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t1 else acc <> TeXRaw t1,
     TeXRaw (chomp (T.drop 1 t2))
     )
-  _ -> error "ERROR: & not found in Align environment"
+  _ -> error "ERROR: ``&'' not found in Align environment"
 splitOnAmpersand' acc (TeXSeq (TeXRaw x) y) = case (T.breakOnAll (T.pack "&") x) of
   [(t1,t2)] -> (
-    if needToDrop acc then TeXRaw (T.dropWhile (\y -> (y == '\n') || (y == ' ')) t1) else acc <> TeXRaw t1,
+    if needToDrop acc then TeXRaw $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t1 else acc <> TeXRaw t1,
     TeXRaw (chomp (T.drop 1 t2)) <> y
     )
   _ -> splitOnAmpersand' (acc <> (TeXRaw x)) y
 splitOnAmpersand' acc (TeXSeq x y) = splitOnAmpersand' (acc <> x) y
-splitOnAmpersand' acc x = error "ERROR: & not found in Align environment"
+splitOnAmpersand' acc x = error "ERROR: ``&'' not found in Align environment"
 dropNonumber :: LaTeX -> LaTeX
 dropNonumber (TeXCommS "nonumber") = TeXEmpty
 dropNonumber (TeXSeq la lb) = TeXSeq (dropNonumber la) (dropNonumber lb)
@@ -114,11 +114,11 @@ bt math (TeXComm com args) = T.concat $ (T.pack <$> ["@", com, "{"]) ++ (btArg <
 bt True (TeXCommS com) = T.pack $ prntLT (TeXCommS com)
 bt math (TeXCommS com) = T.pack $ "@" ++ com
 bt math (TeXEnv com args ltx)
-  | com == "equation" = case findLabel ltx of
-      Just lbl -> T.concat [T.pack "@equation[#:label \"",
-                            lbl,
-                            T.pack "\"]{", T.pack (prntLT $ removeOneLabel ltx), T.pack "}"]
-      Nothing ->  T.concat (T.pack <$> ["@equation{", (prntLT ltx), "}"])
+  | com == "equation" = case getLabelAndRest ltx of
+      Just (lbl, rst) -> T.concat [T.pack "@equation[#:label \"",
+                                   lbl,
+                                   T.pack "\"]{", T.pack $ prntLT rst, T.pack "}"]
+      Nothing         -> T.concat (T.pack <$> ["@equation{", (prntLT ltx), "}"])
   | com == "align" = T.pack $ "@align[r.l.n " ++ (align $ alignedLines TeXEmpty (dropNonumber ltx)) ++ "\n]"
   | otherwise = 
     T.concat $ (T.pack <$> ["@", com, "{"]) ++ [bt math ltx] ++ [T.pack "}"]
@@ -127,7 +127,7 @@ bt math (TeXMath mtype ltx)
     T.concat $ T.pack <$> ["@f{", prntLT ltx, "}"]
   | otherwise = 
     T.concat $ T.pack <$> ["@equation{", prntLT ltx, "}"]
-bt math (TeXLineBreak mm b) = T.pack "@linebreak[] "
+bt math (TeXLineBreak mm b) = T.pack "@linebreak[]"
 bt True (TeXBraces ltx) = T.pack (prntLT (TeXBraces ltx))
 bt False (TeXBraces (TeXSeq (TeXCommS "bf") ltx)) = T.concat $ [T.pack "@bold{"] ++ [bt False ltx] ++ [T.pack "}"]
 bt False (TeXBraces (TeXSeq (TeXCommS "it") ltx)) = T.concat $ [T.pack "@italic{"] ++ [bt False ltx] ++ [T.pack "}"]
@@ -137,21 +137,18 @@ bt math (TeXSeq la lb) = T.append (bt math la) (bt math lb)
 bt math (TeXComment txt) = T.append (T.pack "@;") txt
 
 printSection :: String -> [TeXArg] -> LaTeX -> IO ()
-printSection x args lb = case findLabelImmediately lb of
-  Just lbl -> TIO.putStr (T.concat $
-                          (T.pack <$> ["@", x, "[#:tag \""])
-                          ++ [lbl, T.pack "\"]{"]
-                          ++ [btArg arg | arg <- args]
-                          ++ [T.pack "}"]
-                         )
-  Nothing  -> TIO.putStr (T.concat $
-                          [T.pack "@section{"]
-                          ++ [btArg arg | arg <- args]
-                          ++ [T.pack "}"]
-                         )
+printSection x args lb = case getLabelAndRest lb of
+  Just (lbl, rst) -> do
+    TIO.putStr . T.concat $
+      (T.pack <$> ["@", x, "[#:tag \""]) ++ [lbl, T.pack "\"]{"] ++ [btArg arg | arg <- args] ++ [T.pack "}"]
+    printBT rst
+  Nothing -> do
+    TIO.putStr . T.concat $ (T.pack <$> ["@", x, "{"]) ++ [btArg arg | arg <- args] ++ [T.pack "}"]
+    printBT lb
 
 printBT :: LaTeX -> IO ()
-printBT (TeXSeq (TeXComm x args) lb) | elem x sections = printSection x args lb >> printBT (removeOneLabel lb)
+printBT (TeXEnv "document" _ rst) = printBT rst
+printBT (TeXSeq (TeXComm x args) lb) | elem x sections = printSection x args lb
 printBT (TeXSeq la lb) = TIO.putStr (bt False la) >> printBT lb
 printBT x = TIO.putStr (bt False x)
 
