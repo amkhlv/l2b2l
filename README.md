@@ -2,7 +2,7 @@ Synopsis
 ========
 
 This project provides tools for automatic conversion between `LaTeX` 
-and [BystroTeX]("http://andreimikhailov.com/slides/bystroTeX/slides-manual/index.html")
+and [BystroTeX](http://andreimikhailov.com/slides/bystroTeX/slides-manual/index.html)
 
 
 Installation
