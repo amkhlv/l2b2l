@@ -1,4 +1,4 @@
-module Main where
+module L2B where
 
 import Data.Maybe
 import Text.ParserCombinators.Parsec
