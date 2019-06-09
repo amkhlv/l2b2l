@@ -27,6 +27,7 @@ dependencies:
     - HaTeX
     - wl-pprint-extras
     - ansi-terminal
+    - optparse-applicative
 
 library:
   source-dirs: src
