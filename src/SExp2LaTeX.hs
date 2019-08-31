@@ -38,6 +38,7 @@ sexp2LaTeX (SExp (Sym "title": rest)) = ignore
 sexp2LaTeX (Comment _) = ignore
 
 sexp2LaTeX (SExp [Sym "verb", Str x]) = verbatim $ T.pack x
+sexp2LaTeX (SExp [Sym "bold", Str x]) = emph $ rawstr x
 sexp2LaTeX (SExp (Sym "elem": xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (Str a) = rawstr a
 sexp2LaTeX (Int a) = rawstr $ show a
@@ -59,11 +60,12 @@ sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
   where
   f (SExp [Sym "list", f1, f2, lbl ]) =
     let
-      rendf (SExp [Sym "f", Str x]) = x
-      rendf (SExp [Sym "f"]) = ""
+      rendf (SExp [Sym "f", Str x]) = rawstr x
+      rendf (SExp [Sym "f"]) = rawstr ""
+      rendf (SExp (Sym "elem": x)) = mbox $ sexp2LaTeX (SExp (Sym "elem": x))
       -- TODO: add more here
-      rendf (Str x) = ""
-      r = rawstr $ rendf f1 ++ "\n &" ++ rendf f2
+      rendf (Str x) = mbox $ rawstr x
+      r = rendf f1 >> rawstr ("\n &") >> rendf f2
     in
     case lbl of
       SExp [ Sym "label", Str l ] -> r >> label (rawstr l)
