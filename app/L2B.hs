@@ -38,7 +38,7 @@ findLabel ltx = case ltx of
   _ -> Nothing
 
 getLabelAndRest :: LaTeX -> Maybe (Text, LaTeX) 
-getLabelAndRest ltx = getLabelAndRest' TeXEmpty ltx
+getLabelAndRest = getLabelAndRest' TeXEmpty
 getLabelAndRest' acc ltx = case ltx of
   TeXComm "label" [FixArg (TeXRaw lbl)] -> Just (lbl, acc)
   TeXSeq l1 l2 -> case l1 of
@@ -49,7 +49,7 @@ getLabelAndRest' acc ltx = case ltx of
 unLabel :: LaTeX -> LaTeX
 unLabel (TeXComm "label" _) = TeXEmpty
 unLabel (TeXSeq (TeXComm "label" _) x) = x
-unLabel (TeXSeq ll lr) = (TeXSeq ll (unLabel lr))
+unLabel (TeXSeq ll lr) = TeXSeq ll (unLabel lr)
 unLabel x = x
 
 splitOnAmpersand  = splitOnAmpersand' TeXEmpty
@@ -58,7 +58,8 @@ needToDrop :: LaTeX -> Bool
 needToDrop TeXEmpty = True
 needToDrop (TeXRaw x) = T.null (T.dropWhile (\y -> (y == '\n') || (y == ' ')) x)
 needToDrop _ = False
-chomp t = T.dropWhileEnd (== '\n') $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t
+chomp t = T.dropWhileEnd (\y -> (y == '\n') || (y == ' ')) $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t
+chompStr s = T.unpack $ chomp $ T.pack s
 splitOnAmpersand' acc (TeXRaw x) = case (T.breakOnAll (T.pack "&") x) of
   [(t1,t2)] -> (
     if needToDrop acc then TeXRaw $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t1 else acc <> TeXRaw t1,
@@ -91,19 +92,19 @@ alignedLines acc      (TeXLineBreak mm b) = [LineWithLabel (unLabel acc) (findLa
 alignedLines acc      (TeXSeq (TeXLineBreak mm b) lb) =
   (LineWithLabel (unLabel acc) (findLabel acc)) : (alignedLines TeXEmpty lb)
 alignedLines acc (TeXSeq la lb) = alignedLines (acc <> la) lb
-alignedLines acc x = let ax = acc <> x in [LineWithLabel (unLabel $ ax) (findLabel $ ax)]
+alignedLines acc x = let ax = acc <> x in [LineWithLabel (unLabel ax) (findLabel ax)]
 
 align :: [LineWithLabel] -> String
 align [] = ""
 align (LineWithLabel ln (Just lbl) : rest) = let s = splitOnAmpersand ln in
-  "@list[@;────────────────────────────────\n @f{" ++ prntLT (fst s)
-  ++ "}\n @f{" ++ prntLT (dropTrailingNewline (snd s))
-  ++ "}\n @label{" ++ (T.unpack lbl)
-  ++ "}\n]" ++ align rest
+  "@`(@,f{" ++ chompStr (prntLT $ fst s)
+  ++ "}\n   @,f{" ++ chompStr (prntLT (dropTrailingNewline $ snd s))
+  ++ "}\n   @,label{" ++ T.unpack lbl
+  ++ "})\n" ++ align rest
 align (LineWithLabel ln Nothing : rest) = let s = splitOnAmpersand ln in
-  "@list[@;────────────────────────────────\n @f{" ++ prntLT (fst s)
-  ++ "}\n @f{" ++ prntLT (dropTrailingNewline (snd s))
-  ++ "} \n \"\"\n]" ++ align rest
+  "@`(@,f{" ++ chompStr (prntLT $ fst s)
+  ++ "}\n   @,f{" ++ chompStr (prntLT (dropTrailingNewline $ snd s))
+  ++ "}\n   \"\")\n" ++ align rest
 
 bt :: Bool -> LaTeX -> Text
 bt math TeXEmpty = T.pack ""
@@ -115,18 +116,18 @@ bt True (TeXCommS com) = T.pack $ prntLT (TeXCommS com)
 bt math (TeXCommS com) = T.pack $ "@" ++ com
 bt math (TeXEnv com args ltx)
   | com == "equation" = case getLabelAndRest ltx of
-      Just (lbl, rst) -> T.concat [T.pack "@equation[#:label \"",
+      Just (lbl, rst) -> T.concat [T.pack "@e[#:label \"",
                                    lbl,
-                                   T.pack "\"]{", T.pack $ prntLT rst, T.pack "}"]
-      Nothing         -> T.concat (T.pack <$> ["@equation{", (prntLT ltx), "}"])
-  | com == "align" = T.pack $ "@align[r.l.n " ++ (align $ alignedLines TeXEmpty (dropNonumber ltx)) ++ "\n]"
+                                   T.pack "\"]{\n   ", chomp $ T.pack $ prntLT rst, T.pack "\n   }"]
+      Nothing         -> T.concat (T.pack <$> ["@e{\n   ", chompStr $ prntLT ltx, "\n   }"])
+  | com == "align" = T.pack $ "@(align\n  r.l.n\n  " ++ (align $ alignedLines TeXEmpty (dropNonumber ltx)) ++ ")"
   | otherwise = 
     T.concat $ (T.pack <$> ["@", com, "{"]) ++ [bt math ltx] ++ [T.pack "}"]
 bt math (TeXMath mtype ltx)
   | mtype == Parentheses || mtype == Dollar =
-    T.concat $ T.pack <$> ["@f{", prntLT ltx, "}"]
+    T.concat $ T.pack <$> ["@f{", chompStr $ prntLT ltx, "}"]
   | otherwise = 
-    T.concat $ T.pack <$> ["@equation{", prntLT ltx, "}"]
+    T.concat $ T.pack <$> ["@e{\n   ", chompStr $ prntLT ltx, "\n   }"]
 bt math (TeXLineBreak mm b) = T.pack "@linebreak[]"
 bt True (TeXBraces ltx) = T.pack (prntLT (TeXBraces ltx))
 bt False (TeXBraces (TeXSeq (TeXCommS "bf") ltx)) = T.concat $ [T.pack "@bold{"] ++ [bt False ltx] ++ [T.pack "}"]
