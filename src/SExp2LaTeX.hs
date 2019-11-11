@@ -48,6 +48,10 @@ sexp2LaTeX (SExp (Sym "subpage": Int n: x: Keyword "tag": Str lbl: _)) = case n 
   1 -> subsection (sexp2LaTeX x) >> label (rawstr lbl)
   2 -> subsubsection (sexp2LaTeX x) >> label (rawstr lbl)
 sexp2LaTeX (SExp [Sym "f", Str x]) = MATH.math $ rawstr x
+sexp2LaTeX (SExp [Sym "v+", i, f]) = sexp2LaTeX f
+sexp2LaTeX (SExp [Sym "v-", i, f]) = sexp2LaTeX f
+sexp2LaTeX (SExp [Sym "h+", i, f]) = sexp2LaTeX f
+sexp2LaTeX (SExp [Sym "h-", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "ref", Str x]) = MATH.eqref $ rawstr x
 sexp2LaTeX (SExp (Sym "e":xs)) = getEq Nothing [] xs
   where
@@ -63,6 +67,10 @@ sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
       rendf (SExp [Sym "f", Str x]) = rawstr x
       rendf (SExp [Sym "f"]) = rawstr ""
       rendf (SExp (Sym "elem": x)) = mbox $ sexp2LaTeX (SExp (Sym "elem": x))
+      rendf (SExp [Sym "v+", i, f]) = rendf f
+      rendf (SExp [Sym "v-", i, f]) = rendf f
+      rendf (SExp [Sym "h+", i, f]) = rendf f
+      rendf (SExp [Sym "h-", i, f]) = rendf f
       -- TODO: add more here
       rendf (Str x) = mbox $ rawstr x
       r = rendf f1 >> rawstr ("\n &") >> rendf f2
