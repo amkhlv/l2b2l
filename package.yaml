@@ -28,6 +28,9 @@ dependencies:
     - wl-pprint-extras
     - ansi-terminal
     - optparse-applicative
+    - tagsoup
+    - ansi-terminal
+    - hxt
 
 library:
   source-dirs: src
@@ -48,6 +51,16 @@ executables:
     source-dirs:         app
     ghc-options:
       - -main-is B2L
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - l2b2l
+  bystro-toc:
+    main:               BystroToc.hs
+    source-dirs:        app
+    ghc-options:
+      - -main-is BystroToc
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
