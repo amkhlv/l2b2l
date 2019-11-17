@@ -28,7 +28,7 @@ scribbleName = O.optional $ O.strOption (O.short 's' <> O.metavar "NAME")
 listHTMLsFlag :: O.Parser Bool
 listHTMLsFlag = O.switch (O.long "htmls" <> O.help "list HTMLs" )
 levelLimit :: O.Parser Int
-levelLimit = O.option O.auto (O.short 'L' <> O.value 10 <> O.metavar "LEVEL_LIMIT")
+levelLimit = O.option O.auto (O.short 'L' <> O.value 2 <> O.metavar "LEVEL_LIMIT")
 parser :: O.Parser Clops
 parser = Clops <$> listHTMLsFlag <*> scribbleName <*> levelLimit
 opts :: O.ParserInfo Clops
@@ -38,7 +38,7 @@ printHTMLs :: String -> IO ()
 printHTMLs name = do
   x <- readFile $ name ++ "/index.html"
   let tags = parseTags x
-      toctags = filter (tagOpenAttrNameLit "a" "class" (== "toptoclink")) tags
+      toctags = filter (tagOpenAttrNameLit "a" "class" (== "bystro-toc-section")) tags
   sequence_ [putStrLn $ name ++ "/" ++ fromAttrib "href" t | t <- toctags ]
 
 printSection :: Section -> Int -> IO ()

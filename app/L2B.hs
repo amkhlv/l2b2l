@@ -60,20 +60,20 @@ needToDrop (TeXRaw x) = T.null (T.dropWhile (\y -> (y == '\n') || (y == ' ')) x)
 needToDrop _ = False
 chomp t = T.dropWhileEnd (\y -> (y == '\n') || (y == ' ')) $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t
 chompStr s = T.unpack $ chomp $ T.pack s
-splitOnAmpersand' acc (TeXRaw x) = case (T.breakOnAll (T.pack "&") x) of
+splitOnAmpersand' acc (TeXRaw x) = case T.breakOnAll (T.pack "&") x of
   [(t1,t2)] -> (
     if needToDrop acc then TeXRaw $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t1 else acc <> TeXRaw t1,
     TeXRaw (chomp (T.drop 1 t2))
     )
-  _ -> error "ERROR: ``&'' not found in Align environment"
-splitOnAmpersand' acc (TeXSeq (TeXRaw x) y) = case (T.breakOnAll (T.pack "&") x) of
+  [] -> (TeXEmpty, acc <> TeXRaw x)
+splitOnAmpersand' acc (TeXSeq (TeXRaw x) y) = case T.breakOnAll (T.pack "&") x of
   [(t1,t2)] -> (
     if needToDrop acc then TeXRaw $ T.dropWhile (\y -> (y == '\n') || (y == ' ')) t1 else acc <> TeXRaw t1,
     TeXRaw (chomp (T.drop 1 t2)) <> y
     )
-  _ -> splitOnAmpersand' (acc <> (TeXRaw x)) y
+  _ -> splitOnAmpersand' (acc <> TeXRaw x) y
 splitOnAmpersand' acc (TeXSeq x y) = splitOnAmpersand' (acc <> x) y
-splitOnAmpersand' acc x = error "ERROR: ``&'' not found in Align environment"
+splitOnAmpersand' acc x = (TeXEmpty, acc <> x)
 dropNonumber :: LaTeX -> LaTeX
 dropNonumber (TeXCommS "nonumber") = TeXEmpty
 dropNonumber (TeXSeq la lb) = TeXSeq (dropNonumber la) (dropNonumber lb)
@@ -97,14 +97,13 @@ alignedLines acc x = let ax = acc <> x in [LineWithLabel (unLabel ax) (findLabel
 align :: [LineWithLabel] -> String
 align [] = ""
 align (LineWithLabel ln (Just lbl) : rest) = let s = splitOnAmpersand ln in
-  "@`(@,f{" ++ chompStr (prntLT $ fst s)
-  ++ "}\n   @,f{" ++ chompStr (prntLT (dropTrailingNewline $ snd s))
-  ++ "}\n   @,label{" ++ T.unpack lbl
-  ++ "})\n" ++ align rest
+  "@`(" ++ case fst s of {TeXEmpty -> "\"\"\n" ; x -> "@,f{" ++ chompStr (prntLT $ fst s) ++ "}\n"} 
+  ++ "   @,f{" ++ chompStr (prntLT (dropTrailingNewline $ snd s)) ++ "}\n"
+  ++ "   @,label{" ++ T.unpack lbl ++ "})\n" ++ align rest
 align (LineWithLabel ln Nothing : rest) = let s = splitOnAmpersand ln in
-  "@`(@,f{" ++ chompStr (prntLT $ fst s)
-  ++ "}\n   @,f{" ++ chompStr (prntLT (dropTrailingNewline $ snd s))
-  ++ "}\n   \"\")\n" ++ align rest
+  "@`(" ++ case fst s of {TeXEmpty -> "\"\"\n" ; x -> "@,f{" ++ chompStr (prntLT $ fst s) ++ "}\n"}
+  ++ "   @,f{" ++ chompStr (prntLT (dropTrailingNewline $ snd s)) ++ "}\n"
+  ++ "   \"\")\n" ++ align rest
 
 bt :: Bool -> LaTeX -> Text
 bt math TeXEmpty = T.pack ""
