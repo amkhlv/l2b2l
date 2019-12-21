@@ -84,10 +84,16 @@ listOfExpParser :: Parser [SExp]
 listOfExpParser = let p = many $ try atExpParser <|> sExpParser
                   in try (between (char '(') (char ')') p) <|> between (char '[') (char ']') p
 
+symThenListParser :: Parser [SExp]
+symThenListParser = sym >>= (\s -> (\xs -> Sym "unquote" : Sym s : xs) 
+                                    <$> 
+                                    between (char '[') (char ']') (many $ try atExpParser <|> sExpParser))
+
 sExpParserTight :: Parser SExp
 sExpParserTight =
   try (string "`" >> (SExp . (Sym "quasiquote" :) <$> listOfExpParser))
   <|> try (string "," >> (SExp <$> (try ((Sym "unquote" :) <$> listOfExpParser)
+                                    <|> try symThenListParser
                                     <|>  ((\x -> [Sym "unquote", x]) <$> leafParserTight))))
   <|> try (string "'" >> (try (SExp . (Sym "quote" :) <$> listOfExpParser)
                           <|> Sym <$> sym))

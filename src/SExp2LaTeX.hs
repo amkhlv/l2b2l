@@ -6,6 +6,7 @@ import           NaiveSExp
 import qualified Data.Text as T
 import           Text.LaTeX
 import qualified Text.LaTeX.Packages.AMSMath as MATH
+import qualified Text.LaTeX.Base.Commands as COMM
 
 rawstr :: Monad m => String -> LaTeXT_ m
 rawstr = raw . T.pack
@@ -32,14 +33,26 @@ sexp2LaTeX (SExp (Sym "bystro-set-css-dir": _)) = ignore
 sexp2LaTeX (SExp (Sym "define": _)) = ignore
 sexp2LaTeX (SExp (Sym "bystro-def-formula": _)) = ignore
 sexp2LaTeX (SExp [Sym "bystro-toc"]) = ignore
+sexp2LaTeX (SExp [Sym "bystro-local-toc"]) = ignore
 sexp2LaTeX (SExp (Sym "bystro-close-connection": _)) = ignore
+sexp2LaTeX (SExp [Sym "bystro-source"]) = ignore
+sexp2LaTeX (SExp [Sym "bystro-ribbon"]) = ignore
 sexp2LaTeX (SExp (Sym "disconnect": _)) = ignore
 sexp2LaTeX (SExp (Sym "title": rest)) = ignore
+sexp2LaTeX (SExp [Sym "fsize="]) = ignore
+sexp2LaTeX (SExp (Sym "fsize+" : _)) = ignore
 sexp2LaTeX (Comment _) = ignore
 
 sexp2LaTeX (SExp [Sym "verb", Str x]) = verbatim $ T.pack x
+sexp2LaTeX (SExp [Sym "italic", Str x]) = textit $ rawstr x
 sexp2LaTeX (SExp [Sym "bold", Str x]) = emph $ rawstr x
 sexp2LaTeX (SExp (Sym "elem": xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
+sexp2LaTeX (SExp (Sym "itemlist" : Keyword "style" :  Sym "ordered" : xs)) = 
+  COMM.enumerate $ sequence_ [ COMM.item Nothing >> sexp2LaTeX x | x <- xs ]
+sexp2LaTeX (SExp (Sym "itemlist" : xs)) =
+  COMM.itemize $ sequence_ [ COMM.item Nothing >> sexp2LaTeX x | x <- xs]
+sexp2LaTeX (SExp (Sym "item" : xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
+sexp2LaTeX (SExp (Sym "comment" : xs)) = COMM.footnote $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (Str a) = rawstr a
 sexp2LaTeX (Int a) = rawstr $ show a
 sexp2LaTeX (Dbl a) = rawstr $ show a
@@ -66,6 +79,7 @@ sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
     let
       rendf (SExp [Sym "f", Str x]) = rawstr x
       rendf (SExp [Sym "f"]) = rawstr ""
+      rendf (SExp (Sym "elem": Keyword "style" : Sym "no-break" : xs)) = mbox $ sexp2LaTeX (SExp (Sym "elem": xs))
       rendf (SExp (Sym "elem": x)) = mbox $ sexp2LaTeX (SExp (Sym "elem": x))
       rendf (SExp [Sym "v+", i, f]) = rendf f
       rendf (SExp [Sym "v-", i, f]) = rendf f
@@ -73,7 +87,7 @@ sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
       rendf (SExp [Sym "h-", i, f]) = rendf f
       -- TODO: add more here
       rendf (Str x) = mbox $ rawstr x
-      r = rendf f1 >> rawstr ("\n &") >> rendf f2
+      r = rendf f1 >> rawstr "\n &" >> rendf f2
     in
     case lbl of
       SExp [ Sym "label", Str l ] -> r >> label (rawstr l)
