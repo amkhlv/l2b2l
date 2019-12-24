@@ -54,36 +54,37 @@ printSection sec lim = when (level sec < lim) $ do
   putStr $ title sec
   setSGR [Reset]
   case summary sec of
-    Just s -> putStr $ "(" ++ s ++ ")"
+    Just s -> do
+      setSGR [SetColor Foreground Dull Blue]
+      putStr $ " ← " ++ s 
+      setSGR [Reset]
     Nothing -> return () 
   putStrLn ""
 
+procSecDecl :: Int -> [SExp] -> Section
+procSecDecl level (Keyword _ : x : xs) = procSecDecl level xs
+procSecDecl level (Str ttl : xs) = Section level ttl Nothing
+procSecDecl level (SExp (Sym "elem" : ys) : xs) = Section level (procElem ys) Nothing
 procElem' :: String -> [SExp] -> String
 procElem' acc [] = acc
 procElem' acc (Str x : xs) = procElem' (acc ++ x) xs
 procElem' acc (x:xs) = procElem' (acc ++ "❄") xs
 procElem :: [SExp] -> String
 procElem = procElem' []
+addSummary :: Section -> [SExp] -> Section
+addSummary (Section level title Nothing) xs = Section level title (Just $ procElem xs)
 slide2TOC' :: [Section] -> [Either String SExp] -> [Section]
 slide2TOC' acc [] = acc
 scrbl2TOC' :: [Section] -> [Either String SExp] -> [Section]
 scrbl2TOC' acc [] = reverse acc
-scrbl2TOC' acc (Right (SExp (Sym "page": Str ttl: Keyword "tag": Str lbl: _)) : xs) = 
-  scrbl2TOC' (Section 0 ttl Nothing:acc) xs 
-scrbl2TOC' acc (Right (SExp (Sym "page": SExp (Sym "elem" : ys) : Keyword "tag": Str lbl: _)) : xs) = 
-  scrbl2TOC' (Section 0 (procElem ys) Nothing:acc) xs 
-scrbl2TOC' acc (Right (SExp (Sym "subpage": Int n: Str ttl: Keyword "tag": Str lbl: _)) : xs) = 
-  scrbl2TOC' (Section (fromInteger n) ttl Nothing:acc) xs 
-scrbl2TOC' acc (Right (SExp (Sym "subpage": Int n: SExp (Sym "elem" : ys) : Keyword "tag": Str lbl: _)) : xs) = 
-  scrbl2TOC' (Section (fromInteger n) (procElem ys) Nothing:acc) xs 
-scrbl2TOC' acc (Right (SExp (Sym "slide": Str ttl: cs)) : xs) = 
+scrbl2TOC' acc (Right (SExp (Sym "page": ys)) : xs) = scrbl2TOC' (procSecDecl 0 ys:acc) xs
+scrbl2TOC' acc (Right (SExp (Sym "subpage": Int n: ys)) : xs) =  scrbl2TOC' (procSecDecl (fromInteger n) ys : acc) xs
+scrbl2TOC' acc (Right (SExp (Sym "slide": Str ttl: cs)) : xs) =
    scrbl2TOC' (scrbl2TOC' [] (Right <$> cs) ++ Section 0 ttl Nothing:acc) xs
-scrbl2TOC' acc (Right (SExp (Sym "section": cs)) : xs) = 
-  scrbl2TOC' (Section 1 (case head cs of {Str ttl -> ttl ;  SExp (Sym "elem" : ys) -> procElem ys}) Nothing: acc) xs
-scrbl2TOC' acc (Right (SExp (Sym "subsection": cs)) : xs) = 
-  scrbl2TOC' (Section 2 (case head cs of {Str ttl -> ttl ;  SExp (Sym "elem" : ys) -> procElem ys}) Nothing: acc) xs
-scrbl2TOC' acc (Right (SExp (Sym "subsubsection": cs)) : xs) = 
-  scrbl2TOC' (Section 3 (case head cs of {Str ttl -> ttl ;  SExp (Sym "elem" : ys) -> procElem ys}) Nothing: acc) xs
+scrbl2TOC' acc (Right (SExp (Sym "section": cs)) : xs) = scrbl2TOC' (procSecDecl 1 cs : acc) xs
+scrbl2TOC' acc (Right (SExp (Sym "subsection": cs)) : xs) = scrbl2TOC' (procSecDecl 2 cs : acc) xs
+scrbl2TOC' acc (Right (SExp (Sym "subsubsection": cs)) : xs) = scrbl2TOC' (procSecDecl 2 cs : acc) xs
+scrbl2TOC' (z:zs) (Right (SExp (Sym "summary" : ys)): xs) = scrbl2TOC' (addSummary z ys : zs) xs
 scrbl2TOC' acc (x:xs) = scrbl2TOC' acc xs
 scrbl2TOC :: [Either String SExp] -> [Section]
 scrbl2TOC = scrbl2TOC' [] 
