@@ -24,25 +24,30 @@ rmComments x = x
 unStr :: SExp -> String
 unStr (Str x) = x
 
-ignore :: Monad m => LaTeXT_ m
-ignore = rawstr ""
 
 sexp2LaTeX :: Monad m => SExp -> LaTeXT_ m
-sexp2LaTeX (SExp (Sym "require": _)) = ignore
-sexp2LaTeX (SExp (Sym "bystro-set-css-dir": _)) = ignore
-sexp2LaTeX (SExp (Sym "define": _)) = ignore
-sexp2LaTeX (SExp (Sym "bystro-def-formula": _)) = ignore
-sexp2LaTeX (SExp [Sym "bystro-toc"]) = ignore
-sexp2LaTeX (SExp [Sym "bystro-local-toc"]) = ignore
-sexp2LaTeX (SExp (Sym "bystro-close-connection": _)) = ignore
-sexp2LaTeX (SExp [Sym "bystro-source"]) = ignore
-sexp2LaTeX (SExp [Sym "bystro-ribbon"]) = ignore
-sexp2LaTeX (SExp (Sym "disconnect": _)) = ignore
-sexp2LaTeX (SExp (Sym "title": rest)) = ignore
-sexp2LaTeX (SExp [Sym "fsize="]) = ignore
-sexp2LaTeX (SExp (Sym "fsize+" : _)) = ignore
-sexp2LaTeX (Comment _) = ignore
+sexp2LaTeX (SExp (Sym "require": _)) = mempty
+sexp2LaTeX (SExp (Sym "bystro-set-css-dir": _)) = mempty
+sexp2LaTeX (SExp (Sym "define": _)) = mempty
+sexp2LaTeX (SExp (Sym "bystro-def-formula": _)) = mempty
+sexp2LaTeX (SExp [Sym "bystro-toc"]) = mempty
+sexp2LaTeX (SExp [Sym "bystro-local-toc"]) = mempty
+sexp2LaTeX (SExp (Sym "bystro-close-connection": _)) = mempty
+sexp2LaTeX (SExp [Sym "bystro-source"]) = mempty
+sexp2LaTeX (SExp [Sym "bystro-ribbon"]) = mempty
+sexp2LaTeX (SExp (Sym "disconnect": _)) = mempty
+sexp2LaTeX (SExp (Sym "title": rest)) = mempty
+sexp2LaTeX (SExp [Sym "bibliography"]) = mempty
+sexp2LaTeX (SExp [Sym "fsize="]) = mempty
+sexp2LaTeX (SExp (Sym "fsize+" : _)) = mempty
+sexp2LaTeX (Comment _) = mempty
+sexp2LaTeX (SExp (Sym "use-LaTeX-preamble" : xs)) = do
+  raw "\n%BystroTeX-preamble-start\n"
+  sequence_ [ sexp2LaTeX x | x <- xs ]
+  raw "\n%BystroTeX-preamble-end\n"
 
+sexp2LaTeX (SExp [Sym "cite", Str x]) = raw . T.pack $ "\\cite{" ++ x ++ "}"
+sexp2LaTeX (SExp [Sym "seclink", Str x]) = rawstr "Section " >> (COMM.ref $ rawstr x)
 sexp2LaTeX (SExp [Sym "verb", Str x]) = verbatim $ T.pack x
 sexp2LaTeX (SExp [Sym "italic", Str x]) = textit $ rawstr x
 sexp2LaTeX (SExp [Sym "bold", Str x]) = emph $ rawstr x
@@ -65,12 +70,12 @@ sexp2LaTeX (SExp [Sym "v+", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "v-", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "h+", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "h-", i, f]) = sexp2LaTeX f
-sexp2LaTeX (SExp [Sym "ref", Str x]) = MATH.eqref $ rawstr x
+sexp2LaTeX (SExp [Sym "ref", Str x]) = ref $ rawstr x
 sexp2LaTeX (SExp (Sym "e":xs)) = getEq Nothing [] xs
   where
   getEq Nothing    []    [] = error "ERROR: empty equation"
   getEq Nothing    mvals [] = MATH.equation (rawstr $ concat $ reverse mvals)
-  getEq (Just lbl) mvals [] = MATH.equation (rawstr $ concat $ reverse mvals) >> label (rawstr lbl)
+  getEq (Just lbl) mvals [] = MATH.equation $ (rawstr $ concat $ reverse mvals) >> label (rawstr lbl)
   getEq mlbl mvals (Keyword "label" : Str l : rest) = getEq (Just l) mvals rest
   getEq mlbl mvals (Str v:rexp) = getEq mlbl (v:mvals) rexp
 sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
@@ -86,12 +91,13 @@ sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
       rendf (SExp [Sym "h+", i, f]) = rendf f
       rendf (SExp [Sym "h-", i, f]) = rendf f
       -- TODO: add more here
+      rendf (Str "") = rawstr " "
       rendf (Str x) = mbox $ rawstr x
       r = rendf f1 >> rawstr "\n &" >> rendf f2
     in
     case lbl of
-      SExp [ Sym "label", Str l ] -> r >> label (rawstr l)
-      Str "" -> r
+      SExp [ Sym "label", Str l ] -> rawstr " " >> r >> label (rawstr l) >> rawstr " "
+      Str "" -> rawstr " " >> r >> MATH.nonumber >> rawstr " "
       x -> rawstr $ show x
   f (SExp [Sym "quasiquote", f1, f2, lbl ]) = f (SExp [Sym "list", g f1, g f2, g lbl])
     where

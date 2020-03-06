@@ -97,11 +97,11 @@ alignedLines acc x = let ax = acc <> x in [LineWithLabel (unLabel ax) (findLabel
 align :: [LineWithLabel] -> String
 align [] = ""
 align (LineWithLabel ln (Just lbl) : rest) = let s = splitOnAmpersand ln in
-  "@`(" ++ case fst s of {TeXEmpty -> "\"\"\n" ; x -> "@,f{" ++ chompStr (prntLT $ fst s) ++ "}\n"} 
+  "`(" ++ case fst s of {TeXEmpty -> "\"\"\n" ; x -> "@,f{" ++ chompStr (prntLT $ fst s) ++ "}\n"} 
   ++ "   @,f{" ++ chompStr (prntLT (dropTrailingNewline $ snd s)) ++ "}\n"
   ++ "   @,label{" ++ T.unpack lbl ++ "})\n" ++ align rest
 align (LineWithLabel ln Nothing : rest) = let s = splitOnAmpersand ln in
-  "@`(" ++ case fst s of {TeXEmpty -> "\"\"\n" ; x -> "@,f{" ++ chompStr (prntLT $ fst s) ++ "}\n"}
+  "`(" ++ case fst s of {TeXEmpty -> "\"\"\n" ; x -> "@,f{" ++ chompStr (prntLT $ fst s) ++ "}\n"}
   ++ "   @,f{" ++ chompStr (prntLT (dropTrailingNewline $ snd s)) ++ "}\n"
   ++ "   \"\")\n" ++ align rest
 
