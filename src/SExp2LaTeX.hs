@@ -45,6 +45,7 @@ sexp2LaTeX (SExp (Sym "use-LaTeX-preamble" : xs)) = do
   raw "\n%BystroTeX-preamble-start\n"
   sequence_ [ sexp2LaTeX x | x <- xs ]
   raw "\n%BystroTeX-preamble-end\n"
+sexp2LaTeX (SExp [(Sym "void"), (Sym "BystroTeX-start-appendix")]) = COMM.appendix
 
 sexp2LaTeX (SExp [Sym "cite", Str x]) = raw . T.pack $ "\\cite{" ++ x ++ "}"
 sexp2LaTeX (SExp [Sym "seclink", Str x]) = rawstr "Section " >> (COMM.ref $ rawstr x)
@@ -109,6 +110,7 @@ sexp2LaTeX (SExp (Sym "align" : Sym "l.n" : xss)) =
   let insertEmpty (SExp (Sym "list": xs)) = SExp (Sym "list": Str "": xs)
       insertEmpty (SExp (Sym "quasiquote": xs)) = SExp (Sym "quasiquote": Str "": xs)
   in  sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : map insertEmpty xss))
+sexp2LaTeX (SExp [Sym "tt", Str x]) = texttt $ rawstr (show x)
 sexp2LaTeX x = large2 . texttt $ rawstr ( show x )
 
 piece2LaTeX :: Monad m => Either String SExp -> LaTeXT_ m
