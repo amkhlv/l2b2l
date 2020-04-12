@@ -59,6 +59,8 @@ sexp2LaTeX (SExp (Sym "itemlist" : xs)) =
   COMM.itemize $ sequence_ [ COMM.item Nothing >> sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp (Sym "item" : xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (SExp (Sym "comment" : xs)) = COMM.footnote $ sequence_ [ sexp2LaTeX x | x <- xs]
+sexp2LaTeX (SExp (Sym "larger" : xs)) = COMM.large  $ sequence_ [ sexp2LaTeX x | x <- xs]
+sexp2LaTeX (SExp (Sym "larger-2" : xs)) = COMM.large2  $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (Str a) = rawstr a
 sexp2LaTeX (Int a) = rawstr $ show a
 sexp2LaTeX (Dbl a) = rawstr $ show a
