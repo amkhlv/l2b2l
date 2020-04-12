@@ -111,7 +111,7 @@ atExpParser = removeSpacesAround atExpParserTight
 
 cmdParser :: SExp -> Parser SExp
 cmdParser (Sym x) =
-  try (SExp . (Sym x:) <$> between (char '[') (char ']') (many (sExpParser <|> atExpParser)))
+  try (SExp . (Sym x:) <$> between (char '[') (char ']') (many (try sExpParser <|> atExpParser)))
   <|> return (Sym x)
 cmdParser x = return x
 
