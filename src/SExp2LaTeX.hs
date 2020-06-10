@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import           Text.LaTeX
 import qualified Text.LaTeX.Packages.AMSMath as MATH
 import qualified Text.LaTeX.Base.Commands as COMM
+import qualified Text.LaTeX.Base.Syntax as SYNT
 
 rawstr :: Monad m => String -> LaTeXT_ m
 rawstr = raw . T.pack
@@ -51,7 +52,7 @@ sexp2LaTeX (SExp [Sym "cite", Str x]) = raw . T.pack $ "\\cite{" ++ x ++ "}"
 sexp2LaTeX (SExp [Sym "seclink", Str x]) = rawstr "Section " >> (COMM.ref $ rawstr x)
 sexp2LaTeX (SExp [Sym "verb", Str x]) = verbatim $ T.pack x
 sexp2LaTeX (SExp [Sym "italic", Str x]) = textit $ rawstr x
-sexp2LaTeX (SExp [Sym "bold", Str x]) = emph $ rawstr x
+sexp2LaTeX (SExp (Sym "bold": xs)) = emph $ sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (SExp (Sym "elem": xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (SExp (Sym "itemlist" : Keyword "style" :  Sym "ordered" : xs)) = 
   COMM.enumerate $ sequence_ [ COMM.item Nothing >> sexp2LaTeX x | x <- xs ]
@@ -60,6 +61,7 @@ sexp2LaTeX (SExp (Sym "itemlist" : xs)) =
 sexp2LaTeX (SExp (Sym "item" : xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (SExp (Sym "comment" : xs)) = COMM.footnote $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp (Sym "larger" : xs)) = COMM.large  $ sequence_ [ sexp2LaTeX x | x <- xs]
+sexp2LaTeX (SExp [Sym "hspace", Int n]) = COMM.hspace $ SYNT.Ex $ fromIntegral n
 sexp2LaTeX (SExp (Sym "larger-2" : xs)) = COMM.large2  $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (Str a) = rawstr a
 sexp2LaTeX (Int a) = rawstr $ show a
@@ -73,6 +75,8 @@ sexp2LaTeX (SExp [Sym "v+", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "v-", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "h+", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "h-", i, f]) = sexp2LaTeX f
+sexp2LaTeX (SExp [Sym "th-num", Str x]) = rawstr $ "\\refstepcounter{Theorems}\\label{" ++ x ++ "}\\noindent{\\bf \\arabic{Theorems}}"
+sexp2LaTeX (SExp [Sym "th-ref", Str x]) = rawstr $ "\\ref{" ++ x ++ "}"
 sexp2LaTeX (SExp [Sym "ref", Str x]) = ref $ rawstr x
 sexp2LaTeX (SExp (Sym "e":xs)) = getEq Nothing [] xs
   where
