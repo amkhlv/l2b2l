@@ -4,10 +4,12 @@ module SExp2LaTeX where
 
 import           NaiveSExp
 import qualified Data.Text as T
+import qualified Data.List as L
 import           Text.LaTeX
 import qualified Text.LaTeX.Packages.AMSMath as MATH
 import qualified Text.LaTeX.Base.Commands as COMM
 import qualified Text.LaTeX.Base.Syntax as SYNT
+import qualified Text.LaTeX.Base.Types as TYPE
 
 rawstr :: Monad m => String -> LaTeXT_ m
 rawstr = raw . T.pack
@@ -25,6 +27,15 @@ rmComments x = x
 unStr :: SExp -> String
 unStr (Str x) = x
 
+unQuote (SExp [Sym "unquote", x]) = x
+unQuote (SExp (Sym "unquote": rest)) = SExp rest
+unQuote x = x
+
+mkRow' :: Monad m => LaTeXT_ m -> [SExp] -> LaTeXT_ m
+mkRow' acc [] = acc
+mkRow' acc (x:xs) = mkRow' (acc COMM.& sexp2LaTeX x) xs
+mkRow  :: Monad m => [SExp] -> LaTeXT_ m
+mkRow (x:xs) = mkRow' (sexp2LaTeX x) xs
 
 sexp2LaTeX :: Monad m => SExp -> LaTeXT_ m
 sexp2LaTeX (SExp (Sym "require": _)) = mempty
@@ -50,6 +61,7 @@ sexp2LaTeX (SExp [(Sym "void"), (Sym "BystroTeX-start-appendix")]) = COMM.append
 
 sexp2LaTeX (SExp [Sym "cite", Str x]) = raw . T.pack $ "\\cite{" ++ x ++ "}"
 sexp2LaTeX (SExp [Sym "seclink", Str x]) = rawstr "Section " >> (COMM.ref $ rawstr x)
+sexp2LaTeX (SExp (Sym "seclink": (Str x : _))) = sexp2LaTeX (SExp [Sym "seclink", Str x])
 sexp2LaTeX (SExp [Sym "verb", Str x]) = verbatim $ T.pack x
 sexp2LaTeX (SExp [Sym "italic", Str x]) = textit $ rawstr x
 sexp2LaTeX (SExp (Sym "bold": xs)) = emph $ sequence_ [ sexp2LaTeX x | x <- xs ]
@@ -117,7 +129,20 @@ sexp2LaTeX (SExp (Sym "align" : Sym "l.n" : xss)) =
       insertEmpty (SExp (Sym "quasiquote": xs)) = SExp (Sym "quasiquote": Str "": xs)
   in  sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : map insertEmpty xss))
 sexp2LaTeX (SExp [Sym "tt", Str x]) = texttt $ rawstr (show x)
+sexp2LaTeX (SExp [Sym "tbl", Keyword "orient", o, SExp (Sym "quasiquote" : xs)]) =
+  let mkTable zs = case zs of
+        [] -> COMM.lnbk >> COMM.hline
+        SExp ws : rest -> COMM.lnbk >> COMM.hline >> rawstr " " >> mkRow [ unQuote w | w <- ws ] >> mkTable rest
+        o -> large2 . texttt $ rawstr ( show o )
+  in case xs of
+       SExp ys : rest ->
+         COMM.tabular
+         Nothing
+         ( TYPE.VerticalLine : L.intersperse TYPE.VerticalLine [ TYPE.LeftColumn | _ <- ys ] ++ [TYPE.VerticalLine] )
+         ( COMM.hline >> mkRow [ unQuote y | y <- ys ] >> mkTable rest )
+-- FALLBACK:
 sexp2LaTeX x = large2 . texttt $ rawstr ( show x )
+
 
 piece2LaTeX :: Monad m => Either String SExp -> LaTeXT_ m
 piece2LaTeX (Left x)  = rawstr x
@@ -125,9 +150,4 @@ piece2LaTeX (Right x) = sexp2LaTeX $ rmComments x
 
 scrbl2LaTeX :: Monad m => [Either String SExp] -> LaTeXT_ m
 scrbl2LaTeX = mapM_ piece2LaTeX
-
-
-
-
-
 
