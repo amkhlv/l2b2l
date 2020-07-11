@@ -10,6 +10,8 @@ import qualified Text.LaTeX.Packages.AMSMath as MATH
 import qualified Text.LaTeX.Base.Commands as COMM
 import qualified Text.LaTeX.Base.Syntax as SYNT
 import qualified Text.LaTeX.Base.Types as TYPE
+import qualified Text.LaTeX.Packages.Hyperref as HREF
+import qualified Text.LaTeX.Packages.Color as COLOR
 
 rawstr :: Monad m => String -> LaTeXT_ m
 rawstr = raw . T.pack
@@ -52,6 +54,7 @@ sexp2LaTeX (SExp (Sym "title": rest)) = mempty
 sexp2LaTeX (SExp [Sym "bibliography"]) = mempty
 sexp2LaTeX (SExp [Sym "fsize="]) = mempty
 sexp2LaTeX (SExp (Sym "fsize+" : _)) = mempty
+sexp2LaTeX (SExp (Sym "elemtag" : _)) = mempty
 sexp2LaTeX (Comment _) = mempty
 sexp2LaTeX (SExp (Sym "use-LaTeX-preamble" : xs)) = do
   raw "\n%BystroTeX-preamble-start\n"
@@ -75,6 +78,7 @@ sexp2LaTeX (SExp (Sym "comment" : xs)) = COMM.footnote $ sequence_ [ sexp2LaTeX 
 sexp2LaTeX (SExp (Sym "larger" : xs)) = COMM.large  $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp [Sym "hspace", Int n]) = COMM.hspace $ SYNT.Ex $ fromIntegral n
 sexp2LaTeX (SExp (Sym "larger-2" : xs)) = COMM.large2  $ sequence_ [ sexp2LaTeX x | x <- xs]
+sexp2LaTeX (Sym "noindent") = COMM.noindent
 sexp2LaTeX (Str a) = rawstr a
 sexp2LaTeX (Int a) = rawstr $ show a
 sexp2LaTeX (Dbl a) = rawstr $ show a
@@ -140,6 +144,8 @@ sexp2LaTeX (SExp [Sym "tbl", Keyword "orient", o, SExp (Sym "quasiquote" : xs)])
          Nothing
          ( TYPE.VerticalLine : L.intersperse TYPE.VerticalLine [ TYPE.LeftColumn | _ <- ys ] ++ [TYPE.VerticalLine] )
          ( COMM.hline >> mkRow [ unQuote y | y <- ys ] >> mkTable rest )
+sexp2LaTeX (SExp (Sym "hyperlink" : Str h : xs)) = 
+    HREF.href [] (HREF.createURL h) (COMM.textbf $ COLOR.textcolor (COLOR.DefColor COLOR.Blue) (sequence_ [sexp2LaTeX x | x <- xs]))
 -- FALLBACK:
 sexp2LaTeX x = large2 . texttt $ rawstr ( show x )
 
