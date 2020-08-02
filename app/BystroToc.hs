@@ -81,9 +81,9 @@ scrbl2TOC' acc (Right (SExp (Sym "page": ys)) : xs) = scrbl2TOC' (procSecDecl 0 
 scrbl2TOC' acc (Right (SExp (Sym "subpage": Int n: ys)) : xs) =  scrbl2TOC' (procSecDecl (fromInteger n) ys : acc) xs
 scrbl2TOC' acc (Right (SExp (Sym "slide": Str ttl: cs)) : xs) =
    scrbl2TOC' (scrbl2TOC' [] (Right <$> cs) ++ Section 0 ttl Nothing:acc) xs
-scrbl2TOC' acc (Right (SExp (Sym "section": cs)) : xs) = scrbl2TOC' (procSecDecl 1 cs : acc) xs
-scrbl2TOC' acc (Right (SExp (Sym "subsection": cs)) : xs) = scrbl2TOC' (procSecDecl 2 cs : acc) xs
-scrbl2TOC' acc (Right (SExp (Sym "subsubsection": cs)) : xs) = scrbl2TOC' (procSecDecl 2 cs : acc) xs
+scrbl2TOC' acc (Right (SExp (Sym "section": cs)) : xs)       = scrbl2TOC' (procSecDecl 1 [SExp (Sym "elem" : cs)] : acc) xs
+scrbl2TOC' acc (Right (SExp (Sym "subsection": cs)) : xs)    = scrbl2TOC' (procSecDecl 2 [SExp (Sym "elem" : cs)] : acc) xs
+scrbl2TOC' acc (Right (SExp (Sym "subsubsection": cs)) : xs) = scrbl2TOC' (procSecDecl 3 [SExp (Sym "elem" : cs)] : acc) xs
 scrbl2TOC' (z:zs) (Right (SExp (Sym "summary" : ys)): xs) = scrbl2TOC' (addSummary z ys : zs) xs
 scrbl2TOC' acc (x:xs) = scrbl2TOC' acc xs
 scrbl2TOC :: [Either String SExp] -> [Section]
