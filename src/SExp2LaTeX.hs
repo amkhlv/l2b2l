@@ -56,6 +56,7 @@ sexp2LaTeX (SExp [Sym "fsize="]) = mempty
 sexp2LaTeX (SExp (Sym "fsize+" : _)) = mempty
 sexp2LaTeX (SExp (Sym "elemtag" : _)) = mempty
 sexp2LaTeX (Comment _) = mempty
+sexp2LaTeX (Sym "appendix") = COMM.appendix
 sexp2LaTeX (SExp (Sym "use-LaTeX-preamble" : xs)) = do
   raw "\n%BystroTeX-preamble-start\n"
   sequence_ [ sexp2LaTeX x | x <- xs ]
@@ -86,6 +87,7 @@ sexp2LaTeX (SExp (Sym "page": x: Keyword "tag": Str lbl: _)) = section (sexp2LaT
 sexp2LaTeX (SExp (Sym "subpage": Int n: x: Keyword "tag": Str lbl: _)) = case n of
   1 -> subsection (sexp2LaTeX x) >> label (rawstr lbl)
   2 -> subsubsection (sexp2LaTeX x) >> label (rawstr lbl)
+  3 -> paragraph (sexp2LaTeX x) >> label (rawstr lbl)
 sexp2LaTeX (SExp [Sym "f", Str x]) = MATH.math $ rawstr x
 sexp2LaTeX (SExp [Sym "v+", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "v-", i, f]) = sexp2LaTeX f
