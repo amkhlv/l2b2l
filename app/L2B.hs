@@ -16,10 +16,11 @@ sections = ["section", "subsection", "subsubsection"]
 
 -- this configures printing of the LaTeX code
 prntLT :: LaTeX -> String
-prntLT ltx = let
-  d = docLaTeX ltx
-  sd = PP.renderPretty 1.0 200 d in
-  PP.displayS sd ""
+prntLT ltx = T.unpack $ render ltx
+-- prntLT ltx = let
+--   d = docLaTeX ltx
+--   sd = PP.renderPretty 1.0 200 d in
+--   PP.displayS sd ""
 
 btArg :: TeXArg -> Text
 btArg (FixArg ltx) = bt False ltx
