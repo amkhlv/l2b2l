@@ -55,7 +55,14 @@ sexp2LaTeX (SExp [Sym "bibliography"]) = mempty
 sexp2LaTeX (SExp [Sym "fsize="]) = mempty
 sexp2LaTeX (SExp (Sym "fsize+" : _)) = mempty
 sexp2LaTeX (SExp (Sym "elemtag" : _)) = mempty
+sexp2LaTeX (SExp (Sym "bystro-margin-note": _)) = mempty
 sexp2LaTeX (Comment _) = mempty
+sexp2LaTeX (SExp (Sym "bystro-abstract": rest)) = mempty
+-- sexp2LaTeX (SExp (Sym "bystro-abstract": rest)) = COMM.abstract $ sequence_ [sexp2LaTeX x | x <- rest]
+sexp2LaTeX (SExp (Sym "bystro-authors": rest)) = mempty
+sexp2LaTeX (SExp [Sym "table-of-contents"]) = mempty
+sexp2LaTeX (SExp (Sym "bystro-scrbl-only" : xs)) = mempty
+sexp2LaTeX (SExp (Sym "bystro-latex-only" : Str x : xs)) = rawstr x >> sexp2LaTeX (SExp (Sym "bystro-latex-only" : xs))
 sexp2LaTeX (Sym "appendix") = COMM.appendix
 sexp2LaTeX (SExp (Sym "use-LaTeX-preamble" : xs)) = do
   raw "\n%BystroTeX-preamble-start\n"
@@ -69,6 +76,7 @@ sexp2LaTeX (SExp (Sym "seclink": (Str x : _))) = sexp2LaTeX (SExp [Sym "seclink"
 sexp2LaTeX (SExp [Sym "verb", Str x]) = verbatim $ T.pack x
 sexp2LaTeX (SExp [Sym "italic", Str x]) = textit $ rawstr x
 sexp2LaTeX (SExp (Sym "bold": xs)) = emph $ sequence_ [ sexp2LaTeX x | x <- xs ]
+sexp2LaTeX (SExp (Sym "emph": xs)) = emph $ sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (SExp (Sym "elem": xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (SExp (Sym "itemlist" : Keyword "style" :  Sym "ordered" : xs)) = 
   COMM.enumerate $ sequence_ [ COMM.item Nothing >> sexp2LaTeX x | x <- xs ]
@@ -77,9 +85,11 @@ sexp2LaTeX (SExp (Sym "itemlist" : xs)) =
 sexp2LaTeX (SExp (Sym "item" : xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (SExp (Sym "comment" : xs)) = COMM.footnote $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp (Sym "larger" : xs)) = COMM.large  $ sequence_ [ sexp2LaTeX x | x <- xs]
-sexp2LaTeX (SExp [Sym "hspace", Int n]) = COMM.hspace $ SYNT.Ex $ fromIntegral n
 sexp2LaTeX (SExp (Sym "larger-2" : xs)) = COMM.large2  $ sequence_ [ sexp2LaTeX x | x <- xs]
+sexp2LaTeX (SExp [Sym "hspace", Int n]) = COMM.hspace $ SYNT.Ex $ fromIntegral n
+sexp2LaTeX (SExp [Sym "hrule"]) = COMM.hrulefill
 sexp2LaTeX (Sym "noindent") = COMM.noindent
+sexp2LaTeX (SExp [Sym "linebreak"]) = rawstr "\n\n\\vspace{10pt}\n" 
 sexp2LaTeX (Str a) = rawstr a
 sexp2LaTeX (Int a) = rawstr $ show a
 sexp2LaTeX (Dbl a) = rawstr $ show a
@@ -88,6 +98,12 @@ sexp2LaTeX (SExp (Sym "subpage": Int n: x: Keyword "tag": Str lbl: _)) = case n 
   1 -> subsection (sexp2LaTeX x) >> label (rawstr lbl)
   2 -> subsubsection (sexp2LaTeX x) >> label (rawstr lbl)
   3 -> paragraph (sexp2LaTeX x) >> label (rawstr lbl)
+sexp2LaTeX (SExp (Sym "section": Keyword "tag" : Str tg : xs)) = section (sequence_ [ sexp2LaTeX x | x <- xs]) >> label (rawstr tg)
+sexp2LaTeX (SExp (Sym "subsection": Keyword "tag" : Str tg : xs)) = subsection (sequence_ [ sexp2LaTeX x | x <- xs]) >> label (rawstr tg)
+sexp2LaTeX (SExp (Sym "subsubsection": Keyword "tag" : Str tg : xs)) = subsubsection (sequence_ [ sexp2LaTeX x | x <- xs]) >> label (rawstr tg)
+sexp2LaTeX (SExp (Sym "section": xs)) = section $ sequence_ [ sexp2LaTeX x | x <- xs]
+sexp2LaTeX (SExp (Sym "subsection" : xs)) = subsection $ sequence_ [ sexp2LaTeX x | x <- xs]
+sexp2LaTeX (SExp (Sym "subsubsection" : xs)) = subsubsection $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp [Sym "f", Str x]) = MATH.math $ rawstr x
 sexp2LaTeX (SExp [Sym "v+", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "v-", i, f]) = sexp2LaTeX f
@@ -95,7 +111,11 @@ sexp2LaTeX (SExp [Sym "h+", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "h-", i, f]) = sexp2LaTeX f
 sexp2LaTeX (SExp [Sym "th-num", Str x]) = rawstr $ "\\refstepcounter{Theorems}\\label{" ++ x ++ "}\\noindent{\\bf \\arabic{Theorems}}"
 sexp2LaTeX (SExp [Sym "th-ref", Str x]) = rawstr $ "\\ref{" ++ x ++ "}"
+sexp2LaTeX (SExp [Sym "defn-num", Str x]) = rawstr $ "\\refstepcounter{Definitions}\\label{" ++ x ++ "}\\noindent{\\bf \\arabic{Definitions}}"
+sexp2LaTeX (SExp [Sym "defn-ref", Str x]) = rawstr $ "\\ref{" ++ x ++ "}"
+sexp2LaTeX (SExp [Sym "spn", Sym "attn", Str x]) = textbf $ rawstr x
 sexp2LaTeX (SExp [Sym "ref", Str x]) = ref $ rawstr x
+sexp2LaTeX (SExp (Sym "div": Sym _: xs)) = sexp2LaTeX (SExp (Sym "bold": xs))
 sexp2LaTeX (SExp (Sym "e":xs)) = getEq Nothing [] xs
   where
   getEq Nothing    []    [] = error "ERROR: empty equation"
