@@ -25,14 +25,11 @@ dependencies:
     - text
     - parsec
     - HaTeX
-    - wl-pprint-extras
     - ansi-terminal
     - optparse-applicative
     - tagsoup
     - ansi-terminal
     - hxt
-    - pandoc
-    - pandoc-types
 
 library:
   source-dirs: src

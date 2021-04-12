@@ -10,7 +10,6 @@ import Text.LaTeX
 import Text.LaTeX.Base.Syntax
 import Text.LaTeX.Base.Parser
 import Text.LaTeX.Base.Pretty
-import qualified  Text.PrettyPrint.Free as PP
 
 sections = ["section", "subsection", "subsubsection"]
 
