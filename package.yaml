@@ -30,6 +30,8 @@ dependencies:
     - tagsoup
     - ansi-terminal
     - hxt
+    - pandoc
+    - pandoc-types
 
 library:
   source-dirs: src
@@ -50,6 +52,16 @@ executables:
     source-dirs:         app
     ghc-options:
       - -main-is B2L
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - l2b2l
+  b2pan:
+    main:                B2Pan.hs
+    source-dirs:         app
+    ghc-options:
+      - -main-is B2Pan
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
