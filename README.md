@@ -19,12 +19,26 @@ It will install the binaries `l2b` and `b2l` into `~/.local/bin/`
 Use
 ===
 
+LaTeX to BystroTeX
+------------------
+
     cat myTeXFile.tex | l2b
 
 This will print the `BystroTeX` on `stdout`
 
+BystroTeX to LaTeX
+------------------
+
     cat example.scrbl | tail -n +2 | b2l -f > example.tex
 
+BystroTeX to Pandoc
+-------------------
+
+There is limited translation to [Pandoc](https://pandoc.org/):
+
+    cat example-for-pandoc.scrbl | b2pan
+
+--- this will print Pandoc to `stdout`. See `b2pan -h` for more options.
 
 Limitations
 ===========

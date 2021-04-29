@@ -23,6 +23,7 @@ dependencies:
     - base
     - directory
     - text
+    - bytestring
     - parsec
     - HaTeX
     - ansi-terminal
