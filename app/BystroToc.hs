@@ -1,6 +1,7 @@
 module BystroToc where
 
 import qualified Options.Applicative as O
+import qualified Data.Text as T
 import           Control.Monad (when)
 import           Data.Semigroup ((<>))
 import           Text.HTML.TagSoup
@@ -55,7 +56,7 @@ printSection sec lim = when (level sec < lim) $ do
   setSGR [Reset]
   case summary sec of
     Just s -> do
-      setSGR [SetColor Foreground Dull Blue]
+      setSGR [SetColor Foreground Dull Green]
       putStr $ " ← " ++ s 
       setSGR [Reset]
     Nothing -> return () 
@@ -68,6 +69,7 @@ procSecDecl level (SExp (Sym "elem" : ys) : xs) = Section level (procElem ys) No
 procElem' :: String -> [SExp] -> String
 procElem' acc [] = acc
 procElem' acc (Str x : xs) = procElem' (acc ++ x) xs
+procElem' acc ((SExp [Sym "f", Str f]) : xs) = procElem' (acc ++ "$" ++ f ++ "$") xs
 procElem' acc (x:xs) = procElem' (acc ++ "❄") xs
 procElem :: [SExp] -> String
 procElem = procElem' []
