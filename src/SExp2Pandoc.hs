@@ -34,6 +34,8 @@ sexp2Inlines (SExp (Sym "f":xs)) = let f (Str s) = T.pack s in PB.math $ T.conca
 sexp2Inlines (SExp (Sym "tt":xs)) = let f (Str s) = T.pack s in PB.code $ T.concat $ map f xs
 sexp2Inlines (SExp (Sym "e":Keyword "label":Str l:rest)) = let f (Str s) = T.pack s in PB.displayMath $ T.concat $ map f rest
 sexp2Inlines (SExp (Sym "e":rest)) = let f (Str s) = T.pack s in PB.displayMath $ T.concat $ map f rest
+sexp2Inlines (SExp (Sym "linebreak":[])) = PB.linebreak
+
 
 sexp2Piece :: SExp -> Either T.Text SExp
 sexp2Piece = Right
