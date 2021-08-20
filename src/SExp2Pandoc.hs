@@ -55,12 +55,15 @@ mkrow (SExp (Sym "quote":cells)) = map (splitIntoBlocks . return . sexp2Piece) c
 splitIntoBlocks' :: PB.Blocks -> [Either T.Text SExp] -> [Either T.Text SExp] -> PB.Blocks
 splitIntoBlocks' accblocks [] [] = accblocks
 splitIntoBlocks' accblocks acc [] = splitIntoBlocks' (accblocks<>acc2Para acc) [] []
+-- just finished a block :
 splitIntoBlocks' accblocks [] (Left t:rest) 
+-- if empty line detected :
   | T.null $ T.strip t = splitIntoBlocks' accblocks [] rest 
   | otherwise          = splitIntoBlocks' accblocks [Left t] rest
 splitIntoBlocks' accblocks acc (Left t:rest) 
+-- if empty line detected, then need to finalize the current block and push it into the accblocks :
   | T.null $ T.strip t = splitIntoBlocks' (accblocks<>acc2Para acc) [] rest
-  | otherwise          = splitIntoBlocks' accblocks (Left t:acc) rest
+  | otherwise          = splitIntoBlocks' accblocks (Left t:Left " ":acc) rest
 splitIntoBlocks' accblocks acc (Right (SExp (Sym "itemlist":Keyword "style":Sym "ordered":items)):rest) =
   let f (SExp (Sym "item":xs)) = sexps2Blocks xs 
   in splitIntoBlocks' (accblocks<>acc2Para acc<>PB.orderedList (map f items)) [] rest 
@@ -79,14 +82,19 @@ splitIntoBlocks' accblocks acc (Right (SExp (Sym "subsection":x:xs)):rest) =
   splitIntoBlocks' (accblocks<>acc2Para acc<>PB.header 2 (sexp2Inlines x)) [] rest
 splitIntoBlocks' accblocks acc (Right (SExp (Sym "subsubsection":x:xs)):rest) = 
   splitIntoBlocks' (accblocks<>acc2Para acc<>PB.header 3 (sexp2Inlines x)) [] rest
-splitIntoBlocks' accblocks acc (Right s:rest) = splitIntoBlocks' accblocks (Right s:acc) rest
+splitIntoBlocks' accblocks acc (Right s:rest) = splitIntoBlocks' accblocks (Right s:Left " ":acc) rest
 
 splitIntoBlocks :: [Either T.Text SExp] -> PB.Blocks
 splitIntoBlocks = splitIntoBlocks' mempty []
 
+removeLeadingNewline :: [T.Text] -> [T.Text]
+removeLeadingNewline [] = []
+removeLeadingNewline (x:xs)
+  | T.null $ T.strip x = xs
+  | otherwise = x:xs
 linesplitter :: [Either String SExp] -> [Either T.Text SExp]
 linesplitter xs =
-  let f (Left s) = map Left $ T.lines (T.pack s)
+  let f (Left s) = map Left (removeLeadingNewline $ T.lines (T.pack s))
       f (Right s) = [ Right s ]
   in xs >>= f
 
