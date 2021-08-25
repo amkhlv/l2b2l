@@ -138,6 +138,7 @@ sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
       -- TODO: add more here
       rendf (Str "") = rawstr " "
       rendf (Str x) = mbox $ rawstr x
+      rendf x = error $ "Unknown pattern in align[]:" ++ show x
       r = rendf f1 >> rawstr "\n &" >> rendf f2
     in
     case lbl of

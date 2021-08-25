@@ -40,6 +40,11 @@ There is limited translation to [Pandoc](https://pandoc.org/):
 
 --- this will print Pandoc to `stdout`. See `b2pan -h` for more options.
 
+BystroTeX to PDF via Pandoc
+---------------------------
+
+    cat example-for-pandoc.scrbl | b2pan | pandoc -f native -t pdf -s -o example-for-pandoc.pdf
+
 Limitations
 ===========
 
