@@ -12,6 +12,7 @@ import qualified Text.LaTeX.Base.Syntax as SYNT
 import qualified Text.LaTeX.Base.Types as TYPE
 import qualified Text.LaTeX.Packages.Hyperref as HREF
 import qualified Text.LaTeX.Packages.Color as COLOR
+import           Text.LaTeX.Packages.Graphicx
 
 rawstr :: Monad m => String -> LaTeXT_ m
 rawstr = raw . T.pack
@@ -116,6 +117,8 @@ sexp2LaTeX (SExp [Sym "defn-ref", Str x]) = rawstr $ "\\ref{" ++ x ++ "}"
 sexp2LaTeX (SExp [Sym "spn", Sym "attn", Str x]) = textbf $ rawstr x
 sexp2LaTeX (SExp [Sym "ref", Str x]) = ref $ rawstr x
 sexp2LaTeX (SExp (Sym "div": Sym _: xs)) = sexp2LaTeX (SExp (Sym "bold": xs))
+sexp2LaTeX (SExp [Sym "image", Str x]) = includegraphics [] x
+sexp2LaTeX (SExp [Sym "image", Keyword "scale", Dbl f, Str x]) = includegraphics [ IGScale $ realToFrac f ] x
 sexp2LaTeX (SExp (Sym "e":xs)) = getEq Nothing [] xs
   where
   getEq Nothing    []    [] = error "ERROR: empty equation"
