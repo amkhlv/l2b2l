@@ -40,6 +40,11 @@ mkRow' acc (x:xs) = mkRow' (acc COMM.& sexp2LaTeX x) xs
 mkRow  :: Monad m => [SExp] -> LaTeXT_ m
 mkRow (x:xs) = mkRow' (sexp2LaTeX x) xs
 
+imgext :: String -> String
+imgext x
+  | take 4 (reverse x) == "gvs." = reverse ( drop 3 $ reverse x ) ++ "png"
+  | otherwise = x
+
 sexp2LaTeX :: Monad m => SExp -> LaTeXT_ m
 sexp2LaTeX (SExp (Sym "require": _)) = mempty
 sexp2LaTeX (SExp (Sym "bystro-set-css-dir": _)) = mempty
@@ -117,8 +122,8 @@ sexp2LaTeX (SExp [Sym "defn-ref", Str x]) = rawstr $ "\\ref{" ++ x ++ "}"
 sexp2LaTeX (SExp [Sym "spn", Sym "attn", Str x]) = textbf $ rawstr x
 sexp2LaTeX (SExp [Sym "ref", Str x]) = ref $ rawstr x
 sexp2LaTeX (SExp (Sym "div": Sym _: xs)) = sexp2LaTeX (SExp (Sym "bold": xs))
-sexp2LaTeX (SExp [Sym "image", Str x]) = includegraphics [] x
-sexp2LaTeX (SExp [Sym "image", Keyword "scale", Dbl f, Str x]) = includegraphics [ IGScale $ realToFrac f ] x
+sexp2LaTeX (SExp [Sym "image", Str x]) = includegraphics [] $ imgext x
+sexp2LaTeX (SExp [Sym "image", Keyword "scale", Dbl f, Str x]) = includegraphics [ IGScale $ realToFrac f ] $ imgext x
 sexp2LaTeX (SExp (Sym "e":xs)) = getEq Nothing [] xs
   where
   getEq Nothing    []    [] = error "ERROR: empty equation"
