@@ -14,6 +14,7 @@ import           System.Console.ANSI
 
 data Clops = Clops
   { listHTMLs :: Bool
+   , listImages :: Bool
    , name :: Maybe String
    , lim :: Int
   }
@@ -30,8 +31,10 @@ listHTMLsFlag :: O.Parser Bool
 listHTMLsFlag = O.switch (O.long "htmls" <> O.help "list HTMLs" )
 levelLimit :: O.Parser Int
 levelLimit = O.option O.auto (O.short 'L' <> O.value 2 <> O.metavar "LEVEL_LIMIT")
+listImagesFlag :: O.Parser Bool
+listImagesFlag = O.switch (O.long "images" <> O.help "list @image[..]s" )
 parser :: O.Parser Clops
-parser = Clops <$> listHTMLsFlag <*> scribbleName <*> levelLimit
+parser = Clops <$> listHTMLsFlag <*> listImagesFlag <*> scribbleName <*> levelLimit
 opts :: O.ParserInfo Clops
 opts = O.info ( parser O.<**> O.helper) (O.fullDesc <> O.progDesc "print table of contents")
 
@@ -107,16 +110,43 @@ printTOC name lim = do
     Left _ -> putStrLn "ERROR"
     Right x -> sequence_ [printSection sec lim | sec <- scrbl2TOC x]
 
+printIms :: [String] -> [Either String SExp] -> IO [String]
+printIms acc [] = return acc
+printIms acc ((Right (SExp (Sym "bystro-margin-note": xs))): rest) = 
+  printIms acc (map Right xs) >>= \a -> printIms (acc ++ a) rest
+printIms acc ((Right (SExp (Sym "margin-note": xs))): rest) = 
+  printIms acc (map Right xs) >>= \a -> printIms (acc ++ a) rest
+printIms acc ((Right (SExp (Sym "bystro-scrbl-only": xs))): rest) = 
+  printIms acc (map Right xs) >>= \a -> printIms (acc ++ a) rest
+printIms acc ((Right (SExp (Sym "image": Keyword _: _: xs))): rest) = printIms acc ((Right (SExp (Sym "image": xs))): rest)
+printIms acc ((Right (SExp (Sym "image": Str x: []))): rest) = if elem x acc then printIms acc rest else (putStrLn x) >> printIms (x:acc) rest
+printIms acc (_: rest) = printIms acc rest
+
+listIms :: String -> IO ()
+listIms name = do
+  scrbl <- readFile $ name ++ ".scrbl"
+  case parse scrblParser "" scrbl of
+    Left _ -> putStrLn "ERROR"
+    Right x -> printIms [] x >> return ()
+  
 main = do
   options <- O.execParser opts
   case name options of
-    Just nm -> if listHTMLs options then printHTMLs nm else printTOC nm (lim options)
+    Just nm -> 
+      if listHTMLs options 
+      then printHTMLs nm 
+      else 
+        if listImages options 
+        then listIms nm 
+        else printTOC nm (lim options)
     Nothing -> do
       confs <- BConf.getScribblingConfs
-      sequence_ [
-        do
-          printName $ BConf.name x
-          printTOC ( BConf.name x ) (lim options)
-        | x <- confs
-        ]
+      if listImages options
+      then sequence_ [ listIms ( BConf.name x ) | x <- confs ]
+      else sequence_ [
+             do
+               printName $ BConf.name x
+               printTOC ( BConf.name x ) (lim options)
+             | x <- confs
+             ]
 
