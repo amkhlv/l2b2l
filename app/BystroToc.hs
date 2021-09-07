@@ -40,9 +40,11 @@ opts = O.info ( parser O.<**> O.helper) (O.fullDesc <> O.progDesc "print table o
 
 printHTMLs :: String -> IO ()
 printHTMLs name = do
-  x <- readFile $ name ++ "/index.html"
+  let i = name ++ "/index.html"
+  putStrLn i
+  x <- readFile i
   let tags = parseTags x
-      toctags = filter (tagOpenAttrNameLit "a" "class" (== "bystro-toc-section")) tags
+      toctags = filter (tagOpenAttrNameLit "a" "class" (\c -> c == "toptoclink" || c == "bystro-toc-section")) tags
   sequence_ [putStrLn $ name ++ "/" ++ fromAttrib "href" t | t <- toctags ]
 
 printSection :: Section -> Int -> IO ()
