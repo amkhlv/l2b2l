@@ -70,8 +70,8 @@ removeSpacesAround p = skipMany space >> p >>= (skipMany space >>) . return
 leafParserTight :: Parser SExp
 leafParserTight =
   try (Str <$> TKN.stringLiteral racket)
-  <|> try (Int <$> TKN.integer racket)
   <|> try (Dbl <$> TKN.float racket)
+  <|> try (Int <$> TKN.integer racket)
   <|> try (Bln <$> (try (string "#t" >> return True) <|> (string "#f" >> return False)))
   <|> try (char ';' >> commentParser "")
   <|> try (Keyword <$> (string "#:" >> sym))

@@ -124,6 +124,7 @@ sexp2LaTeX (SExp [Sym "ref", Str x]) = ref $ rawstr x
 sexp2LaTeX (SExp (Sym "div": Sym _: xs)) = sexp2LaTeX (SExp (Sym "bold": xs))
 sexp2LaTeX (SExp [Sym "image", Str x]) = includegraphics [] $ imgext x
 sexp2LaTeX (SExp [Sym "image", Keyword "scale", Dbl f, Str x]) = includegraphics [ IGScale $ realToFrac f ] $ imgext x
+sexp2LaTeX (SExp [Sym "image", Keyword "scale", Int f, Str x]) = includegraphics [ IGScale $ fromIntegral f ] $ imgext x
 sexp2LaTeX (SExp (Sym "e":xs)) = getEq Nothing [] xs
   where
   getEq Nothing    []    [] = error "ERROR: empty equation"
