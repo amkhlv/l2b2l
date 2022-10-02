@@ -13,6 +13,7 @@ import qualified Text.LaTeX.Base.Types as TYPE
 import qualified Text.LaTeX.Packages.Hyperref as HREF
 import qualified Text.LaTeX.Packages.Color as COLOR
 import           Text.LaTeX.Packages.Graphicx
+import qualified Data.Maybe as MB
 
 rawstr :: Monad m => String -> LaTeXT_ m
 rawstr = raw . T.pack
@@ -67,6 +68,12 @@ sexp2LaTeX (SExp (Sym "bystro-abstract": rest)) = mempty
 -- sexp2LaTeX (SExp (Sym "bystro-abstract": rest)) = COMM.abstract $ sequence_ [sexp2LaTeX x | x <- rest]
 sexp2LaTeX (SExp (Sym "bystro-authors": rest)) = mempty
 sexp2LaTeX (SExp [Sym "table-of-contents"]) = mempty
+sexp2LaTeX (SExp (Sym "autolist-pdfs": rest)) = mempty
+sexp2LaTeX (SExp (Sym "autolist-svgs": rest)) = mempty
+sexp2LaTeX (SExp (Sym "autolist-images": rest)) = mempty
+sexp2LaTeX (SExp (Sym "tg": Sym "talk": rest)) = mempty
+sexp2LaTeX (SExp [Sym "high"]) = mempty
+sexp2LaTeX (SExp [Sym "bystro-reset-colors"]) = mempty
 sexp2LaTeX (SExp (Sym "bystro-scrbl-only" : xs)) = mempty
 sexp2LaTeX (SExp (Sym "bystro-latex-only" : Str x : xs)) = rawstr x >> sexp2LaTeX (SExp (Sym "bystro-latex-only" : xs))
 sexp2LaTeX (Sym "appendix") = COMM.appendix
@@ -90,6 +97,7 @@ sexp2LaTeX (SExp (Sym "itemlist" : xs)) =
   COMM.itemize $ sequence_ [ COMM.item Nothing >> sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp (Sym "item" : xs)) = sequence_ [ sexp2LaTeX x | x <- xs ]
 sexp2LaTeX (SExp (Sym "comment" : xs)) = COMM.footnote $ sequence_ [ sexp2LaTeX x | x <- xs]
+sexp2LaTeX (SExp (Sym "summary" : xs)) = sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp (Sym "larger" : xs)) = COMM.large  $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp (Sym "larger-2" : xs)) = COMM.large2  $ sequence_ [ sexp2LaTeX x | x <- xs]
 sexp2LaTeX (SExp [Sym "hspace", Int n]) = COMM.hspace $ SYNT.Ex $ fromIntegral n
@@ -132,7 +140,7 @@ sexp2LaTeX (SExp (Sym "e":xs)) = getEq Nothing [] xs
   getEq (Just lbl) mvals [] = MATH.equation $ (rawstr $ concat $ reverse mvals) >> label (rawstr lbl)
   getEq mlbl mvals (Keyword "label" : Str l : rest) = getEq (Just l) mvals rest
   getEq mlbl mvals (Str v:rexp) = getEq mlbl (v:mvals) rexp
-sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
+sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss >>= MB.maybeToList)
   where
   f (SExp [Sym "list", f1, f2, lbl ]) =
     let
@@ -151,15 +159,16 @@ sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss)
       r = rendf f1 >> rawstr "\n &" >> rendf f2
     in
     case lbl of
-      SExp [ Sym "label", Str l ] -> rawstr " " >> r >> label (rawstr l) >> rawstr " "
-      Str "" -> rawstr " " >> r >> MATH.nonumber >> rawstr " "
-      x -> rawstr $ show x
+      SExp [ Sym "label", Str l ] -> Just $ rawstr " " >> r >> label (rawstr l) >> rawstr " "
+      Str "" -> Just $ rawstr " " >> r >> MATH.nonumber >> rawstr " "
+      x -> Just (rawstr $ show x)
   f (SExp [Sym "quasiquote", f1, f2, lbl ]) = f (SExp [Sym "list", g f1, g f2, g lbl])
     where
     g (SExp [Sym "unquote", x]) = x
     g (SExp (Sym "unquote": rest)) = SExp rest
     g x = x
-  f x = rawstr $ show x
+  f (SExp (Sym "bystro-scrbl-only" : rest)) = Nothing
+  f x = Just (rawstr $ show x)
 sexp2LaTeX (SExp (Sym "align" : Sym "l.n" : xss)) =
   let insertEmpty (SExp (Sym "list": xs)) = SExp (Sym "list": Str "": xs)
       insertEmpty (SExp (Sym "quasiquote": xs)) = SExp (Sym "quasiquote": Str "": xs)
@@ -178,6 +187,7 @@ sexp2LaTeX (SExp [Sym "tbl", Keyword "orient", o, SExp (Sym "quasiquote" : xs)])
          ( COMM.hline >> mkRow [ unQuote y | y <- ys ] >> mkTable rest )
 sexp2LaTeX (SExp (Sym "hyperlink" : Str h : xs)) = 
     HREF.href [] (HREF.createURL h) (COMM.textbf $ COLOR.textcolor (COLOR.DefColor COLOR.Blue) (sequence_ [sexp2LaTeX x | x <- xs]))
+sexp2LaTeX (SExp (Sym "spn": Sym "attn": rest)) = COMM.textbf $ COLOR.textcolor (COLOR.DefColor COLOR.Red) (sequence_ [sexp2LaTeX x | x <- rest])
 -- FALLBACK:
 sexp2LaTeX x = large2 . texttt $ rawstr ( show x )
 
