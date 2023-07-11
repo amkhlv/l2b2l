@@ -88,12 +88,15 @@ symThenListParser :: Parser [SExp]
 symThenListParser = sym >>= (\s -> (\xs -> Sym "unquote" : Sym s : xs) 
                                     <$> 
                                     between (char '[') (char ']') (many $ try atExpParser <|> sExpParser))
+symThenBracesParser :: Parser [SExp]
+symThenBracesParser = sym >>= (\s -> string "{}" >> return [Sym s])
 
 sExpParserTight :: Parser SExp
 sExpParserTight =
   try (string "`" >> (SExp . (Sym "quasiquote" :) <$> listOfExpParser))
   <|> try (string "," >> (SExp <$> (try ((Sym "unquote" :) <$> listOfExpParser)
                                     <|> try symThenListParser
+                                    <|> try symThenBracesParser
                                     <|>  ((\x -> [Sym "unquote", x]) <$> leafParserTight))))
   <|> try (string "'" >> (try (SExp . (Sym "quote" :) <$> listOfExpParser)
                           <|> Sym <$> sym))
