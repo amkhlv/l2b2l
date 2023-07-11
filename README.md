@@ -16,6 +16,18 @@ Then `cd` to __this__ directory and say:
 
 It will install the binaries `l2b` and `b2l` into `~/.local/bin/`
 
+Nix
+---
+
+The file `project.nix` is obtained by running:
+
+    cabal2nix . > project.nix
+
+Then, build:
+
+    nix-build --no-sandbox
+
+
 Use
 ===
 

@@ -17,7 +17,8 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-16.31
+# resolver: lts-18.28
+resolver: lts-20.26
 #resolver: lts-15.3
 # resolver: lts-12.26
 
@@ -40,8 +41,8 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
-  - >-
-    HaTeX-3.22.2.0@sha256:c491c38724d2c9beac25c5a11c1848e3e1e96bd08b3909bd9711870d3610a594,5407
+#  - >-
+#  HaTeX-3.22.2.0@sha256:c491c38724d2c9beac25c5a11c1848e3e1e96bd08b3909bd9711870d3610a594,5407
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
@@ -50,7 +51,7 @@ extra-deps:
 # extra-package-dbs: []
 
 # Control whether we use the GHC we find on the path
-# system-ghc: true
+system-ghc: true
 #
 # Require a specific version of stack, using version ranges
 # require-stack-version: -any # Default
@@ -66,3 +67,8 @@ extra-deps:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+#
+
+nix: 
+  enable: true
+  packages: [zlib, zlib.dev, zlib.out, pkgconfig]
