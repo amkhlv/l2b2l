@@ -8,25 +8,7 @@ and [BystroTeX](http://andreimikhailov.com/slides/bystroTeX/slides-manual/index.
 Installation
 ============
 
-    sudo apt-get install stack
-
-Then `cd` to __this__ directory and say:
-
-    stack install
-
-It will install the binaries `l2b` and `b2l` into `~/.local/bin/`
-
-Nix
----
-
-The file `project.nix` is obtained by running:
-
-    cabal2nix . > project.nix
-
-Then, build:
-
-    nix-build --no-sandbox
-
+    cabal install
 
 Use
 ===
@@ -42,20 +24,6 @@ BystroTeX to LaTeX
 ------------------
 
     cat example.scrbl | tail -n +2 | b2l -f > example.tex
-
-BystroTeX to Pandoc
--------------------
-
-There is limited translation to [Pandoc](https://pandoc.org/):
-
-    cat example-for-pandoc.scrbl | b2pan
-
---- this will print Pandoc to `stdout`. See `b2pan -h` for more options.
-
-BystroTeX to PDF via Pandoc
----------------------------
-
-    cat example-for-pandoc.scrbl | b2pan | pandoc -f native -t pdf -s -o example-for-pandoc.pdf
 
 Limitations
 ===========
