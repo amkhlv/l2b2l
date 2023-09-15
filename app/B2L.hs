@@ -3,12 +3,18 @@
 module B2L where
 
 import qualified Data.Text as T
-import           Text.ParserCombinators.Parsec
-import           NaiveSExp
+import Text.ParserCombinators.Parsec ( parse )
+import NaiveSExp ( scrblParser, SExp(Keyword, SExp, Sym) )
 import qualified Options.Applicative as O
-import           Text.LaTeX
+import Text.LaTeX
+    ( article,
+      document,
+      documentclass,
+      execLaTeXT,
+      Render(render),
+      LaTeXT_ )
 import qualified Data.Text.IO as TIO
-import           SExp2LaTeX
+import SExp2LaTeX ( piece2LaTeX, scrbl2LaTeX )
 
 data Clops = Clops {
   dumpSExp :: Bool
