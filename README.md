@@ -8,8 +8,21 @@ and [BystroTeX](http://andreimikhailov.com/slides/bystroTeX/slides-manual/index.
 Installation
 ============
 
+Plain Cabal
+-----------
+
     cabal install
 
+Nix
+---
+
+The file `project.nix` is obtained by running:
+
+    cabal2nix . > project.nix
+
+Then, build:
+
+    nix-build --no-sandbox
 
 
 Use
