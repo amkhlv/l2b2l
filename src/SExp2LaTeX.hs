@@ -172,15 +172,9 @@ sexp2LaTeX (SExp (Sym "align" : Sym "r.l.n" : xss)) = MATH.align (map f xss >>= 
     g x = x
   f (SExp [Sym "list", f1, f2, lbl]) = case lbl of
     SExp [ Sym "label", Str l ] -> Just $
-<<<<<<< Updated upstream
       rawstr " " >> rendf f1 >> rawstr "\n & " >> rendf f2 >> rawstr "\n " >> label (rawstr l) >> rawstr " "
     Str "" -> Just $
       rawstr " " >> rendf f1 >> rawstr "\n & " >> rendf f2 >> rawstr "\n " >> MATH.nonumber >> rawstr " "
-=======
-      rawstr " " >> rendf f1 >> rawstr "\n & " >> rendf f2 >> rawstr "\n" >> label (rawstr l) >> rawstr " "
-    Str "" -> Just $
-      rawstr " " >> rendf f1 >> rawstr "\n & " >> rendf f2 >> rawstr "\n" >> MATH.nonumber >> rawstr " "
->>>>>>> Stashed changes
     x -> Just (rawstr $ show x)
   f x = error $ "ERROR: line does not fit r.l.n pattern: " ++ show x
 sexp2LaTeX (SExp (Sym "align" : sym : xss)) = MATH.align (map f xss >>= MB.maybeToList)
